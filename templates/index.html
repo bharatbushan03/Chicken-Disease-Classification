@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chicken Disease Classifier</title>
+  <meta name="description" content="AI-powered chicken disease detection — Coccidiosis vs Healthy classification using deep learning." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0b0f1a;
+      --surface: rgba(255,255,255,0.05);
+      --border: rgba(255,255,255,0.10);
+      --accent: #6c63ff;
+      --accent2: #a78bfa;
+      --healthy: #22c55e;
+      --cocci: #ef4444;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --radius: 20px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem 4rem;
+      overflow-x: hidden;
+    }
+
+    /* Animated background blobs */
+    body::before, body::after {
+      content: '';
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.25;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::before {
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, #6c63ff, transparent 70%);
+      top: -200px; left: -200px;
+      animation: blob1 12s ease-in-out infinite alternate;
+    }
+    body::after {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, #a78bfa, transparent 70%);
+      bottom: -150px; right: -150px;
+      animation: blob2 10s ease-in-out infinite alternate;
+    }
+    @keyframes blob1 { to { transform: translate(80px, 60px); } }
+    @keyframes blob2 { to { transform: translate(-80px, -60px); } }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 700px;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      padding-top: 1rem;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      background: rgba(108,99,255,.15);
+      border: 1px solid rgba(108,99,255,.35);
+      color: var(--accent2);
+      font-size: .75rem;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: .35rem .9rem;
+      border-radius: 99px;
+      margin-bottom: 1rem;
+    }
+    header h1 {
+      font-size: clamp(1.8rem, 5vw, 2.8rem);
+      font-weight: 700;
+      background: linear-gradient(135deg, #fff 30%, var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1.2;
+    }
+    header p {
+      color: var(--muted);
+      font-size: .95rem;
+      margin-top: .6rem;
+      max-width: 460px;
+      margin-inline: auto;
+    }
+
+    /* Card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 2rem;
+    }
+
+    /* Drop zone */
+    #drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 14px;
+      padding: 3rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .25s, background .25s;
+      position: relative;
+    }
+    #drop-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(108,99,255,.08);
+    }
+    #drop-zone .icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      display: block;
+      transition: transform .3s;
+    }
+    #drop-zone:hover .icon { transform: translateY(-4px); }
+    #drop-zone p { color: var(--muted); font-size: .9rem; }
+    #drop-zone strong { color: var(--text); }
+    #file-input { display: none; }
+
+    /* Preview */
+    #preview-wrapper {
+      display: none;
+      margin-top: 1.5rem;
+      position: relative;
+    }
+    #preview-wrapper.visible { display: block; }
+    #preview-img {
+      width: 100%;
+      max-height: 320px;
+      object-fit: cover;
+      border-radius: 12px;
+      display: block;
+    }
+    #clear-btn {
+      position: absolute;
+      top: 10px; right: 10px;
+      background: rgba(0,0,0,.6);
+      border: none;
+      color: #fff;
+      border-radius: 50%;
+      width: 32px; height: 32px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .2s;
+    }
+    #clear-btn:hover { background: rgba(239,68,68,.8); }
+
+    /* Predict button */
+    #predict-btn {
+      margin-top: 1.5rem;
+      width: 100%;
+      padding: 1rem;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .2s, transform .15s;
+      letter-spacing: .02em;
+    }
+    #predict-btn:disabled { opacity: .5; cursor: not-allowed; }
+    #predict-btn:not(:disabled):hover { opacity: .88; transform: translateY(-1px); }
+    #predict-btn:not(:disabled):active { transform: translateY(0); }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-right: .5rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Result card */
+    #result-card {
+      display: none;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity .4s, transform .4s;
+    }
+    #result-card.visible {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .result-icon {
+      font-size: 2.5rem;
+      flex-shrink: 0;
+      animation: pop .4s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
+    .result-label {
+      font-size: 1.6rem;
+      font-weight: 700;
+    }
+    .result-label.healthy { color: var(--healthy); }
+    .result-label.cocci   { color: var(--cocci); }
+    .result-sub { color: var(--muted); font-size: .85rem; margin-top: .15rem; }
+
+    /* Confidence bar */
+    .conf-section { margin-top: .5rem; }
+    .conf-section label {
+      display: flex;
+      justify-content: space-between;
+      font-size: .85rem;
+      color: var(--muted);
+      margin-bottom: .5rem;
+    }
+    .conf-section label span { font-weight: 600; color: var(--text); }
+    .bar-track {
+      height: 10px;
+      background: rgba(255,255,255,.08);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      width: 0%;
+      transition: width 1s cubic-bezier(.25,.46,.45,.94);
+    }
+    .bar-fill.healthy { background: linear-gradient(90deg, #16a34a, var(--healthy)); }
+    .bar-fill.cocci   { background: linear-gradient(90deg, #b91c1c, var(--cocci)); }
+
+    /* Train section */
+    .train-section {
+      text-align: center;
+    }
+    .train-section p { color: var(--muted); font-size: .85rem; margin-bottom: 1rem; }
+    #train-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: .6rem 1.5rem;
+      border-radius: 99px;
+      font-size: .85rem;
+      cursor: pointer;
+      transition: border-color .2s, color .2s;
+    }
+    #train-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+    #train-msg {
+      margin-top: .75rem;
+      font-size: .82rem;
+      min-height: 1.2em;
+    }
+
+    /* Error toast */
+    #error-toast {
+      display: none;
+      background: rgba(239,68,68,.15);
+      border: 1px solid rgba(239,68,68,.35);
+      color: #fca5a5;
+      border-radius: 10px;
+      padding: .75rem 1rem;
+      font-size: .85rem;
+      margin-top: 1rem;
+      text-align: center;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: .78rem;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- Header -->
+    <header>
+      <div class="badge">🐔 Deep Learning</div>
+      <h1>Chicken Disease Classifier</h1>
+      <p>Upload a chicken image to instantly detect whether it shows signs of <strong>Coccidiosis</strong> or is <strong>Healthy</strong> using AI.</p>
+    </header>
+
+    <!-- Upload Card -->
+    <div class="card">
+      <div id="drop-zone" role="button" tabindex="0" aria-label="Upload image">
+        <span class="icon">📸</span>
+        <p><strong>Drag &amp; drop</strong> your image here</p>
+        <p style="margin-top:.4rem;">or <strong>click to browse</strong></p>
+        <p style="margin-top:.75rem; font-size:.78rem;">JPG, PNG, WEBP supported</p>
+        <input type="file" id="file-input" accept="image/*" />
+      </div>
+
+      <div id="preview-wrapper">
+        <img id="preview-img" src="" alt="Preview" />
+        <button id="clear-btn" aria-label="Remove image">✕</button>
+      </div>
+
+      <button id="predict-btn" disabled>Analyse Image</button>
+      <div id="error-toast"></div>
+    </div>
+
+    <!-- Result Card -->
+    <div class="card" id="result-card">
+      <div class="result-header">
+        <div class="result-icon" id="result-icon"></div>
+        <div>
+          <div class="result-label" id="result-label"></div>
+          <div class="result-sub" id="result-sub"></div>
+        </div>
+      </div>
+      <div class="conf-section">
+        <label>Confidence <span id="conf-pct"></span></label>
+        <div class="bar-track">
+          <div class="bar-fill" id="bar-fill"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Train Card -->
+    <div class="card train-section">
+      <p>Retrain the model on new data using the DVC pipeline.</p>
+      <button id="train-btn">🔄 Retrain Model</button>
+      <div id="train-msg"></div>
+    </div>
+
+    <footer>Chicken Disease Classification · CNN Binary Classifier · Model: model.keras</footer>
+  </div>
+
+  <script>
+    const dropZone    = document.getElementById('drop-zone');
+    const fileInput   = document.getElementById('file-input');
+    const previewWrap = document.getElementById('preview-wrapper');
+    const previewImg  = document.getElementById('preview-img');
+    const clearBtn    = document.getElementById('clear-btn');
+    const predictBtn  = document.getElementById('predict-btn');
+    const resultCard  = document.getElementById('result-card');
+    const resultIcon  = document.getElementById('result-icon');
+    const resultLabel = document.getElementById('result-label');
+    const resultSub   = document.getElementById('result-sub');
+    const confPct     = document.getElementById('conf-pct');
+    const barFill     = document.getElementById('bar-fill');
+    const errorToast  = document.getElementById('error-toast');
+    const trainBtn    = document.getElementById('train-btn');
+    const trainMsg    = document.getElementById('train-msg');
+
+    let currentB64 = null;
+
+    // ─── Drag & Drop ───
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file) loadFile(file);
+    });
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+    fileInput.addEventListener('change', () => { if (fileInput.files[0]) loadFile(fileInput.files[0]); });
+
+    function loadFile(file) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const dataUrl = e.target.result;
+        previewImg.src = dataUrl;
+        previewWrap.classList.add('visible');
+        predictBtn.disabled = false;
+        currentB64 = dataUrl;
+        hideResult();
+        hideError();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    clearBtn.addEventListener('click', () => {
+      previewImg.src = '';
+      previewWrap.classList.remove('visible');
+      predictBtn.disabled = true;
+      currentB64 = null;
+      fileInput.value = '';
+      hideResult();
+      hideError();
+    });
+
+    // ─── Predict ───
+    predictBtn.addEventListener('click', async () => {
+      if (!currentB64) return;
+      setLoading(true);
+      hideResult();
+      hideError();
+
+      try {
+        const res = await fetch('/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: currentB64 }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Prediction failed');
+        showResult(data);
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    function setLoading(loading) {
+      if (loading) {
+        predictBtn.disabled = true;
+        predictBtn.innerHTML = '<span class="spinner"></span>Analysing…';
+      } else {
+        predictBtn.disabled = false;
+        predictBtn.innerHTML = 'Analyse Image';
+      }
+    }
+
+    function showResult({ label, confidence }) {
+      const isHealthy = label === 'Healthy';
+      const cls = isHealthy ? 'healthy' : 'cocci';
+      const pct = Math.round(confidence * 100);
+
+      resultIcon.textContent = isHealthy ? '✅' : '⚠️';
+      resultLabel.textContent = label;
+      resultLabel.className = `result-label ${cls}`;
+      resultSub.textContent = isHealthy
+        ? 'No disease detected — the chicken appears healthy.'
+        : 'Coccidiosis detected — veterinary attention recommended.';
+
+      confPct.textContent = `${pct}%`;
+      barFill.className = `bar-fill ${cls}`;
+      barFill.style.width = '0%';
+
+      resultCard.style.display = 'block';
+      requestAnimationFrame(() => {
+        resultCard.classList.add('visible');
+        requestAnimationFrame(() => { barFill.style.width = `${pct}%`; });
+      });
+    }
+
+    function hideResult() {
+      resultCard.classList.remove('visible');
+      setTimeout(() => { if (!resultCard.classList.contains('visible')) resultCard.style.display = 'none'; }, 400);
+    }
+
+    function showError(msg) {
+      errorToast.style.display = 'block';
+      errorToast.textContent = '⚠️ ' + msg;
+    }
+    function hideError() {
+      errorToast.style.display = 'none';
+    }
+
+    // ─── Train ───
+    trainBtn.addEventListener('click', async () => {
+      trainBtn.disabled = true;
+      trainMsg.style.color = '#94a3b8';
+      trainMsg.textContent = '⏳ Training started — this may take several minutes…';
+
+      try {
+        const res = await fetch('/train');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Training failed');
+        trainMsg.style.color = '#22c55e';
+        trainMsg.textContent = '✅ ' + data.status;
+      } catch (err) {
+        trainMsg.style.color = '#ef4444';
+        trainMsg.textContent = '❌ ' + err.message;
+      } finally {
+        trainBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

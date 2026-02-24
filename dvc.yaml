@@ -1,0 +1,38 @@
+stages:
+  data_ingestion:
+    cmd: python -c "from CNNClassifier.pipeline import Stage01_DataIngestion; Stage01_DataIngestion().main()"
+    deps:
+      - config/config.yaml
+      - src/CNNClassifier/components/__init__.py
+    outs:
+      - artifacts/data_ingestion
+
+  prepare_base_model:
+    cmd: python -c "from CNNClassifier.pipeline import Stage02_PrepareBaseModel; Stage02_PrepareBaseModel().main()"
+    deps:
+      - config/config.yaml
+      - params.yaml
+      - src/CNNClassifier/components/__init__.py
+    outs:
+      - artifacts/prepare_base_model
+
+  training:
+    cmd: python -c "from CNNClassifier.pipeline import Stage03_Training; Stage03_Training().main()"
+    deps:
+      - config/config.yaml
+      - params.yaml
+      - artifacts/prepare_base_model
+      - src/CNNClassifier/components/__init__.py
+    outs:
+      - artifacts/training/model.keras
+
+  evaluation:
+    cmd: python -c "from CNNClassifier.pipeline import Stage04_Evaluation; Stage04_Evaluation().main()"
+    deps:
+      - config/config.yaml
+      - params.yaml
+      - artifacts/training/model.keras
+      - src/CNNClassifier/components/__init__.py
+    metrics:
+      - artifacts/model_evaluation/evaluation_report.json:
+          cache: false
