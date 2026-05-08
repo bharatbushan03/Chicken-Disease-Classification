@@ -9,7 +9,7 @@ prepare_base_model:
   base_model_path: artifacts/prepare_base_model/base_model.keras
 training:
   root_dir: artifacts/training
-  trained_model_path: artifacts/training/model.keras
+  trained_model_path: model.keras
 model_evaluation:
   root_dir: artifacts/model_evaluation
   report_file: artifacts/model_evaluation/evaluation_report.json

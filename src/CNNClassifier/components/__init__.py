@@ -156,7 +156,7 @@ class Training:
             return
 
         # Use existing trained model if present, else build from scratch
-        model_path = Path("model.keras")
+        model_path = Path(self.config.trained_model_path)
         if model_path.exists():
             logger.info(f"Loading existing model from '{model_path}'.")
             model = tf.keras.models.load_model(model_path)
@@ -183,9 +183,10 @@ class Training:
             epochs=self.config.params_epochs,
         )
 
-        create_directories([self.config.root_dir])
-        model.save(self.config.trained_model_path)
-        logger.info(f"Trained model saved at: {self.config.trained_model_path}")
+        if model_path.parent != Path("."):
+            create_directories([model_path.parent])
+        model.save(model_path)
+        logger.info(f"Trained model saved at: {model_path}")
 
 
 # ─────────────────────────────────────────────

@@ -351,7 +351,7 @@
 
     <!-- Train Card -->
     <div class="card train-section">
-      <p>Retrain the model on new data using the DVC pipeline.</p>
+      <p>Retrain the model if training is enabled on the server.</p>
       <button id="train-btn">🔄 Retrain Model</button>
       <div id="train-msg"></div>
     </div>
@@ -491,7 +491,7 @@
       trainMsg.textContent = '⏳ Training started — this may take several minutes…';
 
       try {
-        const res = await fetch('/train');
+        const res = await fetch('/train', { method: 'POST' });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Training failed');
         trainMsg.style.color = '#22c55e';
