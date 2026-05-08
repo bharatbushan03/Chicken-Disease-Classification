@@ -484,6 +484,28 @@
       errorToast.style.display = 'none';
     }
 
+    async function initHealth() {
+      try {
+        const res = await fetch('/health');
+        const data = await res.json();
+        if (!res.ok) throw new Error('Health check failed');
+
+        if (!data.model_exists) {
+          showError('Model file not found on server. Upload model.keras and redeploy.');
+          predictBtn.disabled = true;
+        }
+
+        if (!data.training_enabled) {
+          trainBtn.disabled = true;
+          trainMsg.style.color = '#94a3b8';
+          trainMsg.textContent = 'Training is disabled on this server.';
+        }
+      } catch (err) {
+        trainMsg.style.color = '#ef4444';
+        trainMsg.textContent = 'Health check failed. Try again later.';
+      }
+    }
+
     // ─── Train ───
     trainBtn.addEventListener('click', async () => {
       trainBtn.disabled = true;
@@ -503,6 +525,8 @@
         trainBtn.disabled = false;
       }
     });
+
+    initHealth();
   </script>
 </body>
 </html>
