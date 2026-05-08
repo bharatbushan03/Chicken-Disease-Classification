@@ -8,6 +8,7 @@ from pathlib import Path
 from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
 from PIL import Image
+from werkzeug.exceptions import RequestEntityTooLarge
 
 from CNNClassifier.pipeline import (
     PredictionPipeline,
@@ -26,6 +27,7 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app)
 app.config["MAX_CONTENT_LENGTH"] = 6 * 1024 * 1024  # 6 MB
+Image.MAX_IMAGE_PIXELS = 10_000_000
 
 
 def resolve_model_path() -> str:
@@ -62,6 +64,11 @@ def health():
     )
 
 
+@app.errorhandler(RequestEntityTooLarge)
+def handle_request_too_large(_error):
+    return jsonify({"error": "Image too large. Max 6 MB."}), 413
+
+
 @app.route("/predict", methods=["POST"])
 def predict():
     """
@@ -71,6 +78,9 @@ def predict():
     Returns JSON: { "label": "...", "confidence": 0.95 }
     """
     try:
+        if not request.is_json:
+            return jsonify({"error": "Content-Type must be application/json"}), 415
+
         data = request.get_json(silent=True)
         if not data or "image" not in data:
             return jsonify({"error": "No image provided"}), 400
