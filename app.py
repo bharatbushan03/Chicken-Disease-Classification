@@ -125,6 +125,8 @@ def train():
         logger.info(">> Stage 04: Evaluation")
         Stage04_Evaluation().main()
 
+        predictor.reset_model()
+
         return jsonify({"status": "Training complete"})
     except Exception as e:
         logger.exception("Error during training")

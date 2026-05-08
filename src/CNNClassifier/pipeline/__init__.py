@@ -67,18 +67,38 @@ class PredictionPipeline:
     def __init__(self, model_path: str = "model.keras"):
         self.model_path = Path(model_path)
         self._model = None
+        self._model_mtime = None
+
+    def _load_model(self):
+        if not self.model_path.exists():
+            raise FileNotFoundError(
+                f"Model file not found at '{self.model_path}'. "
+                "Run training first."
+            )
+        self._model = tf.keras.models.load_model(self.model_path)
+        self._model_mtime = self.model_path.stat().st_mtime
+        logger.info(f"Model loaded from '{self.model_path}'.")
 
     @property
     def model(self):
         if self._model is None:
-            if not self.model_path.exists():
+            self._load_model()
+        else:
+            try:
+                current_mtime = self.model_path.stat().st_mtime
+            except FileNotFoundError:
                 raise FileNotFoundError(
                     f"Model file not found at '{self.model_path}'. "
                     "Run training first."
                 )
-            self._model = tf.keras.models.load_model(self.model_path)
-            logger.info(f"Model loaded from '{self.model_path}'.")
+            if self._model_mtime is None or current_mtime != self._model_mtime:
+                logger.info("Model file changed. Reloading model.")
+                self._load_model()
         return self._model
+
+    def reset_model(self):
+        self._model = None
+        self._model_mtime = None
 
     def predict(self, image: Image.Image) -> dict:
         """
