@@ -418,4 +418,26 @@ data/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
-/data
+# AI Agent files and directories
+.claude/
+.claude.json
+.gemini/
+.antigravity/
+.antigravity-ide/
+.antigravitycli/
+.cline/
+.codeium/
+.codex/
+.copilot/
+.cursor/
+.windsurf/
+.qodo/
+.junie/
+.securecoder/
+.cagent/
+ai_completion/
+.ollama/
+.aider*
+.continue/
+.supermaven/
+.gitingest/
