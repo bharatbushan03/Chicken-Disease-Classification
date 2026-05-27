@@ -31,6 +31,10 @@ Image.MAX_IMAGE_PIXELS = 10_000_000
 
 
 def resolve_model_path() -> str:
+    """
+    Resolves the path to the model file.
+    Checks environment variable MODEL_PATH, then local directory, then artifacts.
+    """
     env_path = os.getenv("MODEL_PATH")
     if env_path:
         return env_path
@@ -40,6 +44,7 @@ def resolve_model_path() -> str:
 
 
 def training_enabled() -> bool:
+    """Checks if the training endpoint is enabled via environment variables."""
     return os.getenv("ENABLE_TRAINING", "false").strip().lower() in {"1", "true", "yes"}
 
 # Instantiate prediction pipeline once at startup (lazy-loads model on first call)
@@ -48,11 +53,13 @@ predictor = PredictionPipeline(model_path=resolve_model_path())
 
 @app.route("/", methods=["GET"])
 def index():
+    """Renders the main index page."""
     return render_template("index.html")
 
 
 @app.route("/health", methods=["GET"])
 def health():
+    """Health check endpoint to verify model existence and training status."""
     model_path = resolve_model_path()
     return jsonify(
         {
