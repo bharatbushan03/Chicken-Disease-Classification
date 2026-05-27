@@ -4,8 +4,9 @@ import io
 import logging
 import os
 from pathlib import Path
+from typing import Any, Dict, Tuple, Union
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, Response, jsonify, render_template, request
 from flask_cors import CORS
 from PIL import Image
 from werkzeug.exceptions import RequestEntityTooLarge
@@ -52,13 +53,13 @@ predictor = PredictionPipeline(model_path=resolve_model_path())
 
 
 @app.route("/", methods=["GET"])
-def index():
+def index() -> str:
     """Renders the main index page."""
     return render_template("index.html")
 
 
 @app.route("/health", methods=["GET"])
-def health():
+def health() -> Response:
     """Health check endpoint to verify model existence and training status."""
     model_path = resolve_model_path()
     return jsonify(
@@ -72,16 +73,16 @@ def health():
 
 
 @app.errorhandler(RequestEntityTooLarge)
-def handle_request_too_large(_error):
+def handle_request_too_large(_error: Any) -> Tuple[Response, int]:
+    """Handles cases where the uploaded image exceeds the maximum size."""
     return jsonify({"error": "Image too large. Max 6 MB."}), 413
 
 
 @app.route("/predict", methods=["POST"])
-def predict():
+def predict() -> Union[Response, Tuple[Response, int]]:
     """
+    Predicts the disease from the uploaded chicken image.
     Expects JSON body: { "image": "<base64-encoded image data>" }
-    The base64 string may include a data-URL prefix (data:image/...;base64,...)
-    or be raw base64.
     Returns JSON: { "label": "...", "confidence": 0.95 }
     """
     try:
@@ -122,7 +123,7 @@ def predict():
 
 
 @app.route("/train", methods=["POST"])
-def train():
+def train() -> Union[Response, Tuple[Response, int]]:
     """Trigger the full training pipeline."""
     try:
         if not training_enabled():
