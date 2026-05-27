@@ -6,9 +6,9 @@ with open("README.md", 'r', encoding = 'utf-8') as f:
 __version__ = "0.0.0"
 
 REPO_NAME = "Chicken-Disease-Classification"
-AUTHOR_USER_NAME = "your_username"  # Replace with your GitHub username
+AUTHOR_USER_NAME = "bharatbushan03"
 SRC_REPO = "CNNClassifier"
-AUTHOR_EMAIL = "your_email@example.com"  # Replace with your email
+AUTHOR_EMAIL = "bharatbushan5320@gmail.com"
 
 setuptools.setup(
     name=SRC_REPO,
